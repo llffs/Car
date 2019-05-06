@@ -1,18 +1,19 @@
 package com.example.car;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.Vibrator;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -25,6 +26,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -33,26 +37,76 @@ import java.util.UUID;
 
 import cn.bmob.v3.Bmob;
 
+import static com.example.car.BuildConfig.DEBUG;
+
+
 public class MainActivity extends AppCompatActivity {
 
-    private ToggleButton mToggleButton;             //连接小车
-    private TextView tvSound;                       //显示连接信息
     private Button middle;                          //喇叭
     private Button left;                            //左转
     private Button above;                           //前进
     private Button right;                           //右转
     private Button below;                           //后退
     private Button stop;                            //停止
-    public byte[] message = new byte[1];
-    private Vibrator vibrator;
-    private int ENABLE_BLUETOOTH = 2;               //作为requestCode返回参数
+
+    boolean hex = false;
+
+    private static final String TAG = "MainActivity";
+
+
+    public static final int REC_DATA = 2;
+
+    public static final int CONNECTED_DEVICE_NAME = 4;
+    public static final int BT_TOAST = 5;
+    public static final int MAIN_TOAST = 6;
+
+    // 标志字符串常量
+    public static final String DEVICE_NAME = "device name";
+    public static final String TOAST = "toast";
+
+    // 意图请求码
+    private static final int REQUEST_CONNECT_DEVICE = 1;
+    private static final int ENABLE_BLUETOOTH = 2;               //作为requestCode返回参数
+
+    //蓝牙连接服务对象
     private BluetoothAdapter bluetoothAdapter;
-    BluetoothCarService carService;
+
+    // 已连接设备的名字
+    private String mConnectedDeviceName = null;
+
+    private TextView RecDataView;
+
+    BluetoothService mConnectService = null;
     BluetoothDevice bluetoothDevice;                //蓝牙设备
-    BluetoothSocket bluetoothSocket = null;  ;       //蓝牙接口和其他设备交换数据
+    BluetoothSocket bluetoothSocket = null;
+    ;       //蓝牙接口和其他设备交换数据
     OutputStream outputStream = null;
-    private static final UUID MY_UUID_SECURE = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private String blueAddress = "98:D3:31:70:9B:CA";//蓝牙模块的MAC地址
+    private final static String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB"; // UUID
+
+
+    static boolean isHEXsend = false, isHEXrec = false;
+
+
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE
+            );
+        }
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,8 +116,10 @@ public class MainActivity extends AppCompatActivity {
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        mToggleButton = (ToggleButton) findViewById(R.id.tglSound);
-        tvSound = (TextView) findViewById(R.id.tvSound);
+
+        init_hex_string_table();
+        verifyStoragePermissions(this);
+
         middle = (Button) findViewById(R.id.middle);
         left = (Button) findViewById(R.id.left);
         right = (Button) findViewById(R.id.right);
@@ -85,6 +141,18 @@ public class MainActivity extends AppCompatActivity {
         toolbar.setTitle("我的智能小车");
         toolbar.setTitleTextColor(Color.WHITE);
         this.setSupportActionBar(toolbar);
+
+        ((TextView) toolbar.findViewById(R.id.search)).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (bluetoothAdapter.isEnabled()) {
+                    Intent intent = new Intent(MainActivity.this, DeviceListActivity.class);
+                    startActivityForResult(intent, REQUEST_CONNECT_DEVICE);
+                }else {
+                    Toast.makeText(MainActivity.this,"请连接蓝牙之后操作", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         //退出登录
         ((TextView) toolbar.findViewById(R.id.exit)).setOnClickListener(new View.OnClickListener() {
@@ -127,64 +195,184 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //连接小车
-        mToggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        //停止按钮
+        stop.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    if (bluetoothAdapter != null) {                     //是否支持蓝牙
-                        Log.d("true", "已连接");
-                        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                        startActivityForResult(intent, ENABLE_BLUETOOTH);
-                        run();
-                        tvSound.setText("已连接");
-                    } else {
-                        tvSound.setText("不支持蓝牙");
-                    }
-                } else {
-                    bluetoothAdapter.disable();
-                    Toast.makeText(MainActivity.this, "蓝牙已断开", Toast.LENGTH_SHORT).show();
-                    tvSound.setText("已断开连接");
-                }
+            public void onClick(View v) {
+                //TODO
+                sendString("a");
             }
         });
-
-
-        //喇叭按钮
-//        middle.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                //TODO
-//            }
-//        });
     }
+
+    @Override
+    public synchronized void onResume() {
+        super.onResume();
+
+        if (mConnectService != null) {
+            if (mConnectService.getState() == BluetoothService.IDLE) {
+                //监听其他蓝牙主设备
+                mConnectService.acceptWait();
+            }
+        }
+    }
+
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if(DEBUG) Log.i(TAG, "++ ON START ++");
+        if (!bluetoothAdapter.isEnabled()) {
+            Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableIntent,ENABLE_BLUETOOTH);
+        } //否则创建蓝牙连接服务对象
+        else if (mConnectService == null){
+            mConnectService = new BluetoothService(mHandler);
+        }
+}
+
+
+    timeThread timeTask=null;
+    private class timeThread extends Thread{
+        private int sleeptime;
+        timeThread(int militime){
+            super();
+            sleeptime=militime;
+        }
+
+        @Override
+        public void run(){
+            while(!isInterrupted()){
+                if(DEBUG)Log.i("myDebug", "timeThread start");
+//                sendMessage(null,sendContent.getText().toString());
+                //mHandler.obtainMessage(MainActivity.REC_DATA,buffer.length,-1,buffer).sendToTarget();
+                try {
+                    Thread.sleep(sleeptime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    break;
+                }
+            }
+            if(DEBUG)Log.i("myDebug", "timeThread end");
+        }
+    }
+
+    String[] hex_string_table=new String[256];
+    private void init_hex_string_table(){
+        for(int i=0;i<256;i++){
+            if(i<16){
+                hex_string_table[i]=" 0"+Integer.toHexString(i).toUpperCase();
+            }else{
+                hex_string_table[i]=" "+Integer.toHexString(i).toUpperCase();
+            }
+        }
+    }
+    private int align_num=0;//对齐字节数
+
+
+    private final Handler mHandler = new Handler(){
+
+        @Override
+        public void handleMessage(Message msg) {
+            StringBuffer sb=new StringBuffer();
+            byte[] bs;
+            float sWidth;
+            int b,i,lineWidth=0,align_i=0;
+            switch (msg.what) {
+                case REC_DATA:
+                    sb.setLength(0);
+                    if(isHEXrec){
+                        bs=(byte[])msg.obj;
+                        for(i=0;i<msg.arg1;i++){
+                            b=(bs[i]&0xff);
+                            sb.append(hex_string_table[b]);
+                            sWidth=RecDataView.getPaint().measureText(hex_string_table[b]);
+                            lineWidth+=sWidth;
+                            if(lineWidth>RecDataView.getWidth()||(align_num!=0&&align_num==align_i)){
+                                lineWidth=(int)sWidth;align_i=0;
+                                sb.insert(sb.length()-3, '\n');
+                            }
+                            align_i++;
+                        }
+                    }else {
+                        bs=(byte[])msg.obj;
+                        char[] c=new char[msg.arg1];
+                        for(i=0;i<msg.arg1;i++){
+                            c[i]=(char)(bs[i]&0xff);
+                            sWidth=RecDataView.getPaint().measureText(c,i,1);
+                            lineWidth+=sWidth;
+                            if(lineWidth>RecDataView.getWidth()){
+                                lineWidth=(int)sWidth;
+                                sb.append('\n');
+                            }
+                            if(c[i]=='\n')lineWidth=0;
+                            sb.append(c[i]);
+                        }
+                    }
+                    RecDataView.append(sb);
+                    break;
+                case CONNECTED_DEVICE_NAME:
+                    // 提示已连接设备名
+                    mConnectedDeviceName = msg.getData().getString(DEVICE_NAME);
+                    Toast.makeText(getApplicationContext(), "已连接到"
+                            + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                    MainActivity.this.setTitle("已连接");
+                    break;
+                case BT_TOAST:
+                    if(mConnectedDeviceName!=null)
+                        Toast.makeText(getApplicationContext(), "与"+mConnectedDeviceName+
+                                msg.getData().getString(TOAST),Toast.LENGTH_SHORT).show();
+                    else Toast.makeText(getApplicationContext(), "与"+target_device_name+
+                            msg.getData().getString(TOAST),Toast.LENGTH_SHORT).show();
+                    MainActivity.this.setTitle("未连接");
+                    mConnectedDeviceName=null;
+                    break;
+                case MAIN_TOAST:
+                    Toast.makeText(getApplicationContext(),"",Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    };
+
+    private String target_device_name=null;
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         // requestCode 与请求开启 Bluetooth 传入的 requestCode 相对应
-        if (requestCode == ENABLE_BLUETOOTH) {
-            switch (resultCode) {
-                // 点击确认按钮
-                case Activity.RESULT_OK: {
-                    // TODO 用户选择开启 Bluetooth，Bluetooth 会被开启
-
+        switch (requestCode) {
+            case REQUEST_CONNECT_DEVICE:
+                if (resultCode == Activity.RESULT_OK) {
+                    String address = data.getExtras().getString(DeviceListActivity.DEVICE_ADDRESS);
+                    // 获取设备
+                    BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+                    try {
+                        bluetoothSocket = device.createRfcommSocketToServiceRecord(UUID
+                                .fromString(MY_UUID));
+                    } catch (IOException e) {
+                        Toast.makeText(this, "Get socket err" + e, Toast.LENGTH_SHORT).show();
+                    }
+                    target_device_name=device.getName();
+                    if(target_device_name.equals(mConnectedDeviceName)){
+                        Toast.makeText(this, "已连接"+mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    // 提示正在连接设备
+                    Toast.makeText(this, "正在连接"+target_device_name, Toast.LENGTH_SHORT).show();
+                    // 连接设备
+                    mConnectService.connect(device);
                 }
                 break;
                 // 点击取消按钮或点击返回键
-                case Activity.RESULT_CANCELED: {
-                    // TODO 用户拒绝打开 Bluetooth, Bluetooth 不会被开启
-                    bluetoothAdapter.disable();
-                    Toast.makeText(MainActivity.this, "用户拒绝开启蓝牙", Toast.LENGTH_SHORT).show();
-                    mToggleButton.setChecked(false);
-                    tvSound.setText("已断开连接");
+            case ENABLE_BLUETOOTH:
+                // 请求打开蓝牙被用户拒绝时提示
+                if (resultCode == Activity.RESULT_OK) {
+                    mConnectService = new BluetoothService(mHandler);
+                } else {
+                    Toast.makeText(this,"拒绝打开蓝牙", Toast.LENGTH_SHORT).show();
                 }
-                break;
-                default:
-
-                    break;
             }
         }
-    }
+
 
 
     //控制小车
@@ -194,60 +382,41 @@ public class MainActivity extends AppCompatActivity {
                 switch (v.getId()) {
                     case R.id.above:
                         if (event.getAction() == MotionEvent.ACTION_UP) {
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("5");
 
                         }
                         if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
-                            message[0] = (byte) 0x41;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("8");
 
                         }
                         break;
                     case R.id.left:
                         if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("5");
 
                         }
                         if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
-                            message[0] = (byte) 0x44;//设置要发送的数值
-                            bluesend(message);//发送数值
-
+                            sendString("4");
                         }
                         break;
                     case R.id.right:
                         if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("5");
 
                         }
                         if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
-                            message[0] = (byte) 0x43;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("6");
                         }
                         break;
                     case R.id.below:
                         if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
+                            sendString("5");
+                        }
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
+                            sendString("2");
+                        }
+                        break;
 
-                        }
-                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
-                            message[0] = (byte) 0x42;//设置要发送的数值
-                            bluesend(message);//发送数值
-                        }
-                        break;
-                    case R.id.stop:
-                        if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
-                        }
-                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
-                            message[0] = (byte) 0x40;//设置要发送的数值
-                            bluesend(message);//发送数值
-                        }
-                        break;
                     default:
                         break;
                 }
@@ -258,48 +427,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public static byte[] hexStringToBytes(String hexString) {
+        hexString = hexString.replaceAll(" ", "");
+        if ((hexString == null) || (hexString.equals(""))) {
+            return null;
+        }
+        hexString = hexString.toUpperCase();
+        int length = hexString.length() / 2;
+        char[] hexChars = hexString.toCharArray();
+        byte[] d = new byte[length];
+        for (int i = 0; i < length; ++i) {
+            int pos = i * 2;
+            d[i] = (byte) (charToByte(hexChars[pos]) << 4 | charToByte(hexChars[(pos + 1)]));
+        }
+        return d;
+    }
+
+    private static byte charToByte(char c) {
+        return (byte) "0123456789ABCDEF".indexOf(c);
+    }
 
     //蓝牙发送数据
-    public void bluesend(byte[] message) {
-        try {
-            outputStream = bluetoothSocket.getOutputStream();
-            Log.d("send", Arrays.toString(message));
-            outputStream.write(message);
-        } catch (IOException e) {
-            e.printStackTrace();
+    public boolean sendString(String str) {
+        if (bluetoothSocket == null) {
+            Toast.makeText(this, "蓝牙连接已断开，请重新连接！", Toast.LENGTH_SHORT).show();
+            return false;
         }
+        if (str == null) {
+            Toast.makeText(this, "Please enter the content", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        try {
+            OutputStream os = bluetoothSocket.getOutputStream();
+            if (hex) {
+                byte[] bos_hex = hexStringToBytes(str);
+                os.write(bos_hex);
+                Log.d("bluetooth","发送16进制数据:" + bos_hex);
+            } else {
+                byte[] bos = str.getBytes("GB2312");
+                os.write(bos);
+                Log.d("bluetooth","发送普通数据" + bos);
+            }
+
+        } catch (IOException e) {
+        }
+        return true;
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (bluetoothAdapter.isEnabled()) {
-            try {
-                bluetoothSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            finish();
-        }
-    }
-
-    protected void run() {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Set<BluetoothDevice> devices = bluetoothAdapter.getBondedDevices();
-                bluetoothDevice = bluetoothAdapter.getRemoteDevice(blueAddress);
-                try {
-                    bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(MY_UUID_SECURE);
-                    Log.d("true", "开始连接");
-                    bluetoothSocket.connect();
-                    Log.d("true", "完成连接");
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
-
+        if (DEBUG) Log.e(TAG, "onDestroy");
+        // Stop the Bluetooth connection
+        if (mConnectService != null) mConnectService.cancelAllBtThread();
+        if (timeTask != null) timeTask.interrupt();
+        android.os.Process.killProcess(android.os.Process.myPid());
     }
 }

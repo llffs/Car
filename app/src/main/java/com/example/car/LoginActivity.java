@@ -39,8 +39,6 @@ public class LoginActivity extends AppCompatActivity {
     EditText password;              //密码
     Button login;                   //用户登录按钮
     TextView register;                //注册按钮
-    ToggleButton tglSound;
-    private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private LinearLayout mName, mPsw;
     private float mWidth, mHeight;
     private View mInputLayout;
@@ -70,7 +68,6 @@ public class LoginActivity extends AppCompatActivity {
         password = (EditText) findViewById(R.id.password);
         login = (Button) findViewById(R.id.login);
         register = (TextView) findViewById(R.id.register);
-        tglSound = (ToggleButton) findViewById(R.id.tglSound);
 
         //实现单击登录的业务逻辑
         login.setOnClickListener(new View.OnClickListener() {
