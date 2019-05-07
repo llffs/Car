@@ -10,6 +10,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.media.Image;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
@@ -22,6 +23,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -47,7 +49,8 @@ public class MainActivity extends AppCompatActivity {
     private Button above;                           //前进
     private Button right;                           //右转
     private Button below;                           //后退
-    private Button stop;                            //停止
+//    private Button stop;                            //停止
+    private ImageButton lanya;
 
     boolean hex = false;
 
@@ -55,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
 
 
     public static final int REC_DATA = 2;
+
+    private TextView RecDataView;
 
     public static final int CONNECTED_DEVICE_NAME = 4;
     public static final int BT_TOAST = 5;
@@ -73,8 +78,6 @@ public class MainActivity extends AppCompatActivity {
 
     // 已连接设备的名字
     private String mConnectedDeviceName = null;
-
-    private TextView RecDataView;
 
     BluetoothService mConnectService = null;
     BluetoothDevice bluetoothDevice;                //蓝牙设备
@@ -125,14 +128,15 @@ public class MainActivity extends AppCompatActivity {
         right = (Button) findViewById(R.id.right);
         above = (Button) findViewById(R.id.above);
         below = (Button) findViewById(R.id.below);
-        stop = (Button) findViewById(R.id.stop);
+//        stop = (Button) findViewById(R.id.stop);
+        lanya = (ImageButton) findViewById(R.id.png2);
 
         ButtonListener bt = new ButtonListener();
         left.setOnTouchListener(bt);
         right.setOnTouchListener(bt);
         above.setOnTouchListener(bt);
         below.setOnTouchListener(bt);
-        stop.setOnTouchListener(bt);
+//        stop.setOnTouchListener(bt);
         middle.setOnTouchListener(bt);
 
 
@@ -150,6 +154,36 @@ public class MainActivity extends AppCompatActivity {
                     startActivityForResult(intent, REQUEST_CONNECT_DEVICE);
                 }else {
                     Toast.makeText(MainActivity.this,"请连接蓝牙之后操作", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        lanya.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (bluetoothAdapter.isEnabled()){
+                    Toast.makeText(MainActivity.this, "蓝牙已开启", Toast.LENGTH_SHORT).show();
+                }else {
+                        Toast.makeText(MainActivity.this, "蓝牙启动", Toast.LENGTH_SHORT).show();
+                        new Thread() {
+                            public void run() {
+                                if (!bluetoothAdapter.isEnabled()) {
+                                    bluetoothAdapter.enable();
+                                }
+                            }
+                        }.start();
+                    }
+                    if (!bluetoothAdapter.isEnabled()) {
+                        Toast.makeText(MainActivity.this, "打开蓝牙中", Toast.LENGTH_SHORT).show();
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (!bluetoothAdapter.isEnabled()) {
+                                    Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                                    startActivityForResult(enabler, ENABLE_BLUETOOTH);
+                                }
+                            }
+                        }, 5000);
                 }
             }
         });
@@ -196,13 +230,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         //停止按钮
-        stop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //TODO
-                sendString("a");
-            }
-        });
+//        stop.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                //TODO
+//                sendString("a");
+//            }
+//        });
     }
 
     @Override
@@ -381,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
             if (bluetoothAdapter.isEnabled()) {
                 switch (v.getId()) {
                     case R.id.above:
-                        if (event.getAction() == MotionEvent.ACTION_UP) {
+                        if (event.getAction() == MotionEvent.ACTION_UP) {//放开事件
                             sendString("5");
 
                         }
@@ -391,28 +425,28 @@ public class MainActivity extends AppCompatActivity {
                         }
                         break;
                     case R.id.left:
-                        if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
+                        if (event.getAction() == MotionEvent.ACTION_UP) {//放开事件
                             sendString("5");
 
                         }
-                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
                             sendString("4");
                         }
                         break;
                     case R.id.right:
-                        if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
+                        if (event.getAction() == MotionEvent.ACTION_UP) {//放开事件
                             sendString("5");
 
                         }
-                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
                             sendString("6");
                         }
                         break;
                     case R.id.below:
-                        if (event.getAction() == MotionEvent.ACTION_UP) {//按下事件
+                        if (event.getAction() == MotionEvent.ACTION_UP) {//放开事件
                             sendString("5");
                         }
-                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//放开事件
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
                             sendString("2");
                         }
                         break;
@@ -454,19 +488,29 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
         if (str == null) {
-            Toast.makeText(this, "Please enter the content", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "请输入内容", Toast.LENGTH_SHORT).show();
             return false;
         }
 
         try {
             OutputStream os = bluetoothSocket.getOutputStream();
-            if (hex) {
-                byte[] bos_hex = hexStringToBytes(str);
-                os.write(bos_hex);
-                Log.d("bluetooth","发送16进制数据:" + bos_hex);
+            if (true) {
+//                byte[] bos_hex = hexStringToBytes(str);
+//                mConnectService.write(bos_hex);
+//                Log.d("bluetooth","发送16进制数据:" + bos_hex);
+                String[] ss=str.split(" ");
+                byte[] bs;
+                bs=new byte[1];
+                for(String s:ss) {
+                    if (s.length() != 0) {
+                        bs[0] = (byte) (int) Integer.valueOf(s, 16);
+                        mConnectService.write(bs);
+                        Log.d("bluetooth", "16进制" + bs);
+                    }
+                }
             } else {
                 byte[] bos = str.getBytes("GB2312");
-                os.write(bos);
+                mConnectService.write(bos);
                 Log.d("bluetooth","发送普通数据" + bos);
             }
 
@@ -482,6 +526,5 @@ public class MainActivity extends AppCompatActivity {
         // Stop the Bluetooth connection
         if (mConnectService != null) mConnectService.cancelAllBtThread();
         if (timeTask != null) timeTask.interrupt();
-        android.os.Process.killProcess(android.os.Process.myPid());
     }
 }
