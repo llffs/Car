@@ -30,12 +30,6 @@
     </android.support.v7.widget.Toolbar>
 
     <Button
-        android:id="@+id/warn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="70dp"
-        android:text="警报"/>
-    <Button
         android:id="@+id/middle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -70,13 +64,20 @@
         android:layout_alignLeft="@+id/middle"
         android:layout_below="@+id/middle"
         android:text="下"/>
-    <Button
-        android:id="@+id/stop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <!--<Button-->
+        <!--android:id="@+id/stop"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_alignParentRight="true"-->
+        <!--android:layout_marginTop="70dp"-->
+        <!--android:text="停止"/>-->
+    <ImageButton
+        android:id="@+id/png2"
+        android:layout_width="55dip"
+        android:layout_height="55dip"
         android:layout_alignParentRight="true"
         android:layout_marginTop="70dp"
-        android:text="停止"/>
+        android:src="@drawable/logo" />
 
      <!--   <TextView
             android:layout_width="match_parent"
