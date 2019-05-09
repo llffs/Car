@@ -43,7 +43,7 @@ public class DeviceListActivity extends Activity {
         setResult(Activity.RESULT_CANCELED);
 
         scanButton = (Button) findViewById(R.id.button_scan);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.my_toolbar2);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.my_toolbar3);
 
         //设置搜索键监听方法
         scanButton.setOnClickListener(new View.OnClickListener(){
