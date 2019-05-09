@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private Button above;                           //前进
     private Button right;                           //右转
     private Button below;                           //后退
-//    private Button stop;                            //停止
+    private Button free;                            //自动行驶
     private ImageButton lanya;
 
     boolean hex = false;
@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
         right = (Button) findViewById(R.id.right);
         above = (Button) findViewById(R.id.above);
         below = (Button) findViewById(R.id.below);
-//        stop = (Button) findViewById(R.id.stop);
+        free = (Button) findViewById(R.id.free);
         lanya = (ImageButton) findViewById(R.id.png2);
 
         ButtonListener bt = new ButtonListener();
@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
         right.setOnTouchListener(bt);
         above.setOnTouchListener(bt);
         below.setOnTouchListener(bt);
-//        stop.setOnTouchListener(bt);
+        free.setOnTouchListener(bt);
         middle.setOnTouchListener(bt);
 
 
@@ -152,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
                 if (bluetoothAdapter.isEnabled()) {
                     Intent intent = new Intent(MainActivity.this, DeviceListActivity.class);
                     startActivityForResult(intent, REQUEST_CONNECT_DEVICE);
+
                 }else {
                     Toast.makeText(MainActivity.this,"请连接蓝牙之后操作", Toast.LENGTH_SHORT).show();
                 }
@@ -162,7 +163,36 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (bluetoothAdapter.isEnabled()){
-                    Toast.makeText(MainActivity.this, "蓝牙已开启", Toast.LENGTH_SHORT).show();
+                    switch (v.getId()) {
+                        case R.id.png2: {
+                            //Toast.makeText(MainActivity.this, "蓝牙已开启", Toast.LENGTH_SHORT).show();
+                            AlertDialog.Builder builder = new AlertDialog.Builder(
+                                    MainActivity.this);
+                            builder.setMessage("蓝牙已开启，确认关闭吗？")
+                                    .setTitle("提示");
+                            //单击确认后触发事件
+                            builder.setPositiveButton("确认",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                            bluetoothAdapter.disable();
+                                            Toast.makeText(MainActivity.this, "蓝牙已关闭！", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                            builder.setNegativeButton("取消",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+                            builder.create().show();
+                            break;
+                        }
+                        default:
+                            break;
+                    }
                 }else {
                         Toast.makeText(MainActivity.this, "蓝牙启动", Toast.LENGTH_SHORT).show();
                         new Thread() {
@@ -174,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
                         }.start();
                     }
                     if (!bluetoothAdapter.isEnabled()) {
-                        Toast.makeText(MainActivity.this, "打开蓝牙中", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, "蓝牙已开启", Toast.LENGTH_SHORT).show();
                         new Handler().postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -229,8 +259,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //停止按钮
-//        stop.setOnClickListener(new View.OnClickListener() {
+//        //自动行驶按钮
+//        free.setOnClickListener(new View.OnClickListener() {
 //            @Override
 //            public void onClick(View v) {
 //                //TODO
@@ -448,6 +478,16 @@ public class MainActivity extends AppCompatActivity {
                         }
                         if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
                             sendString("2");
+                        }
+                        break;
+                    case R.id.middle:
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
+                            sendString("1");
+                        }
+                        break;
+                    case R.id.free:
+                        if (event.getAction() == MotionEvent.ACTION_DOWN) {//按下事件
+                            sendString("7");
                         }
                         break;
 

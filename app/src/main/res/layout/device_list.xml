@@ -4,8 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     >
+
     <android.support.v7.widget.Toolbar
-        android:id="@+id/my_toolbar2"
+        android:id="@+id/my_toolbar3"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/colorPrimary">
@@ -19,6 +20,10 @@
             android:textColor="@android:color/white"/>
     </android.support.v7.widget.Toolbar>
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
     <TextView android:id="@+id/title_paired_devices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -31,9 +36,10 @@
     <ListView android:id="@+id/paired_devices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:stackFromBottom="true"
+        android:stackFromBottom="false"
         android:layout_weight="1"
     />
+    </LinearLayout>
     <TextView android:id="@+id/title_new_devices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,7 +52,7 @@
     <ListView android:id="@+id/new_devices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:stackFromBottom="true"
+        android:stackFromBottom="false"
         android:layout_weight="1"
     />
     <Button android:id="@+id/button_scan"
