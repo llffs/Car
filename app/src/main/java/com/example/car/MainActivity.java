@@ -10,8 +10,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.media.Image;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.app.ActivityCompat;
@@ -22,19 +20,15 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.Set;
 import java.util.UUID;
 
 import cn.bmob.v3.Bmob;
@@ -44,17 +38,21 @@ import static com.example.car.BuildConfig.DEBUG;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button middle;                          //喇叭
-    private Button left;                            //左转
-    private Button above;                           //前进
-    private Button right;                           //右转
-    private Button below;                           //后退
-    private Button free;                            //自动行驶
+    private ImageButton middle;                          //喇叭
+    private ImageButton left;                            //左转
+    private ImageButton above;                           //前进
+    private ImageButton right;                           //右转
+    private ImageButton below;                           //后退
+    private ImageView free;                            //自动行驶
     private ImageButton lanya;
+    private ImageButton stop;
 
     boolean hex = false;
 
     private static final String TAG = "MainActivity";
+
+
+    OutputStream outputStream = null;
 
 
     public static final int REC_DATA = 2;
@@ -83,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
     BluetoothDevice bluetoothDevice;                //蓝牙设备
     BluetoothSocket bluetoothSocket = null;
     ;       //蓝牙接口和其他设备交换数据
-    OutputStream outputStream = null;
     private String blueAddress = "98:D3:31:70:9B:CA";//蓝牙模块的MAC地址
     private final static String MY_UUID = "00001101-0000-1000-8000-00805F9B34FB"; // UUID
 
@@ -123,13 +120,14 @@ public class MainActivity extends AppCompatActivity {
         init_hex_string_table();
         verifyStoragePermissions(this);
 
-        middle = (Button) findViewById(R.id.middle);
-        left = (Button) findViewById(R.id.left);
-        right = (Button) findViewById(R.id.right);
-        above = (Button) findViewById(R.id.above);
-        below = (Button) findViewById(R.id.below);
-        free = (Button) findViewById(R.id.free);
+        middle = (ImageButton) findViewById(R.id.middle);
+        left = (ImageButton) findViewById(R.id.left);
+        right = (ImageButton) findViewById(R.id.right);
+        above = (ImageButton) findViewById(R.id.above);
+        below = (ImageButton) findViewById(R.id.below);
+        free = (ImageView) findViewById(R.id.free);
         lanya = (ImageButton) findViewById(R.id.png2);
+        stop = (ImageButton)findViewById(R.id.stop);
 
         ButtonListener bt = new ButtonListener();
         left.setOnTouchListener(bt);
@@ -175,6 +173,11 @@ public class MainActivity extends AppCompatActivity {
                                     new DialogInterface.OnClickListener() {
                                         @Override
                                         public void onClick(DialogInterface dialog, int which) {
+                                            if (bluetoothSocket != null) {
+                                                mConnectService.cancelAllBtThread();
+
+                                            }
+
                                             dialog.dismiss();
                                             bluetoothAdapter.disable();
                                             Toast.makeText(MainActivity.this, "蓝牙已关闭！", Toast.LENGTH_SHORT).show();
@@ -233,6 +236,9 @@ public class MainActivity extends AppCompatActivity {
                                 new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
+                                        if (bluetoothSocket != null) {
+                                            mConnectService.cancelAllBtThread();
+                                        }
                                         dialog.dismiss();
                                         MainActivity.this.finish();
                                         bluetoothAdapter.disable();
@@ -259,15 +265,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-//        //自动行驶按钮
-//        free.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                //TODO
-//                sendString("a");
-//            }
-//        });
+        //自动行驶按钮
+        stop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //TODO
+                sendString("5");
+            }
+        });
     }
+
+
 
     @Override
     public synchronized void onResume() {
@@ -567,4 +575,5 @@ public class MainActivity extends AppCompatActivity {
         if (mConnectService != null) mConnectService.cancelAllBtThread();
         if (timeTask != null) timeTask.interrupt();
     }
+
 }

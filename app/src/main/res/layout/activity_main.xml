@@ -29,68 +29,76 @@
             android:textColor="@android:color/white"/>
     </android.support.v7.widget.Toolbar>
 
-    <Button
+    <ImageButton
         android:id="@+id/middle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:layout_margin="30dp"
-        android:text="喇叭"/>
-    <Button
+        android:background="#7adfb8"
+        android:src="@drawable/laba"/>
+    <ImageButton
         android:id="@+id/left"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/middle"
         android:layout_toLeftOf="@+id/middle"
-        android:text="左"/>
-    <Button
+        android:background="#7adfb8"
+        android:src="@drawable/left"/>
+    <ImageButton
         android:id="@+id/right"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignTop="@+id/middle"
         android:layout_toRightOf="@+id/middle"
-        android:text="右"/>
-    <Button
+        android:background="#7adfb8"
+        android:src="@drawable/right"/>
+    <ImageButton
         android:id="@+id/above"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/middle"
+        android:layout_centerHorizontal="true"
+        android:background="#7adfb8"
         android:layout_above="@+id/middle"
-        android:text="上"/>
-    <Button
+        android:src="@drawable/shang"/>
+    <ImageButton
         android:id="@+id/below"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/middle"
+        android:layout_centerHorizontal="true"
         android:layout_below="@+id/middle"
-        android:text="下"/>
-    <Button
+        android:background="#7adfb8"
+        android:src="@drawable/xia"/>
+    <ImageView
         android:id="@+id/free"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
+        android:background="@drawable/btn_shape"
         android:layout_marginTop="70dp"
-        android:text="自动行驶"/>
+        android:src="@drawable/zdjs"/>
     <ImageButton
         android:id="@+id/png2"
         android:layout_width="55dip"
         android:layout_height="55dip"
         android:layout_alignParentRight="true"
         android:layout_marginTop="70dp"
-        android:src="@drawable/logo" />
+        android:background="#7adfb8"
+        android:src="@drawable/bluetooth" />
+
+    <ImageButton
+        android:id="@+id/stop"
+        android:layout_marginTop="70dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_toRightOf="@+id/free"
+        android:background="#7adfb8"
+        android:src="@drawable/tingzhi"/>
 
 
-     <!--   <TextView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:background="@drawable/tim"/>
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:id="@+id/photo"/>
-    -->
+
+
 
 
 </RelativeLayout>
